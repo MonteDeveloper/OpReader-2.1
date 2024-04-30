@@ -108,20 +108,6 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 style={{ height: 'calc(100dvh - (78px * 2))', position: 'relative' }}
             >
                 {
-                    // pages.map((page, index) =>
-                    //     <SwiperSlide key={index}>
-                    //         <Stack direction={'row'} justifyContent={'center'} alignItems={'center'} height={'100%'} width={'100%'} bgcolor={'#1d2136'}>
-                    //             {/* <Typography fontSize={30} color={'black'}>{index}</Typography> */}
-                    //             <img className='fit-contain' src={page} alt={'page' + index + 1} />
-                    //             <Fade in={true} unmountOnExit>
-                    //                 <Stack spacing={5} justifyContent={'center'} alignItems={'center'} textAlign={'center'} height={'100dvh'}>
-                    //                     <span className='loader'></span>
-                    //                 </Stack>
-                    //             </Fade>
-                    //         </Stack>
-                    //     </SwiperSlide>
-                    // )
-
                     pages.map((page, index) => (
                         <SwiperSlide key={index}>
                             <Stack direction="row" justifyContent="center" alignItems="center" height="100%" width="100%" bgcolor="#1d2136">

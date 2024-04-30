@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Navigation, Pagination, Scrollbar, A11y } from 'swiper/modules';
+import { Navigation, Pagination, Scrollbar, A11y, Zoom } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 
 import 'swiper/css';
@@ -7,6 +7,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
 import { Box, Button, Stack, Typography, Fade } from '@mui/material';
+
 
 function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastChap}) {
     const imageLinkTemplate = `https://onepiecepower.com/manga8/onepiece/volumi/volume${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`; // aggiungi page.jpg
@@ -100,9 +101,10 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
 
             {/* SLIDER */}
             <Swiper
-                modules={[A11y]}
+                modules={[A11y, Zoom]}
                 spaceBetween={30}
                 slidesPerView={1}
+                zoom={{ toggle: true }}
                 onSwiper={(swiper) => console.log(swiper)}
                 onSlideChange={(swiper) => setCurrentSlideIndex(swiper.activeIndex + 1)}
                 style={{ height: 'calc(100dvh - (78px * 2))', position: 'relative' }}

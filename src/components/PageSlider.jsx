@@ -125,7 +125,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 {
                     pages.map((page, index) => (
                         <SwiperSlide style={{overflow: 'auto'}}>
-                            <Stack direction="row" justifyContent="center" alignItems="center" height={100 + "%"} width={100 * zoom + "%"} bgcolor="#1d2136" sx={{touchAction:'pan-x', transition: 'width 0.5s ease'}}>
+                            <Stack direction="row" justifyContent="center" alignItems="center" height={100 + "%"} width={100 * zoom + "%"} bgcolor="#1d2136" sx={{transition: 'width 0.5s ease'}}>
                                     <img
                                         className={"fit-contain"}
                                         width={1}

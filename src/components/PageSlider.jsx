@@ -88,10 +88,14 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
         });
     };
 
-    const [isZoomed, setIsZoomed] = useState(false);
-
-    function handleZoomChange(newTransform){
+    function handleZoomChange(newTransform) {
         setIsZoomed(newTransform.state.scale !== 1)
+    }
+
+    const [zoom, setZoom] = useState(1);
+    
+    function switchZoom(){
+        setZoom(zoom == 1 ? 2.4 : 1);
     }
 
     return (
@@ -101,9 +105,9 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 <Button sx={{ height: 1, color: 'white' }} onClick={closeChapter}><i className="fa-solid fa-chevron-left"></i></Button>
                 <Stack sx={{ opacity: .5 }} spacing={1} alignItems={'center'} justifyContent={'center'} py={2}>
                     <Typography variant="h3" color={'white'} fontSize={10}>ONE PIECE</Typography>
-                    <Typography textAlign={'center'} variant="h2" color={'white'} fontSize={15}>CAPITOLO {isZoomed}</Typography>
+                    <Typography textAlign={'center'} variant="h2" color={'white'} fontSize={15}>CAPITOLO {chapter}</Typography>
                 </Stack>
-                <Button sx={{ height: 1, color: 'white' }}><i className="fa-regular fa-circle-question"></i></Button>
+                <Button onClick={switchZoom} sx={{ height: 1, color: 'white' }}><i class="fa-solid fa-magnifying-glass"></i></Button>
             </Stack>
 
             {/* SLIDER */}
@@ -111,26 +115,25 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 modules={[A11y, Zoom]}
                 spaceBetween={30}
                 slidesPerView={1}
-                zoom={{ toggle: true }}
                 onSwiper={(swiper) => console.log(swiper)}
                 onSlideChange={(swiper) => setCurrentSlideIndex(swiper.activeIndex + 1)}
-                style={{ height: 'calc(100dvh - (78px * 2))', position: 'relative' }}
+                style={{ height: 'calc(100dvh - (78px * 2 + 20px))', position: 'relative' }}
+                allowTouchMove={zoom == 1 ? true : false}
+                allowSlideNext={zoom == 1 ? true : false}
+                allowSlidePrev={zoom == 1 ? true : false}
             >
                 {
                     pages.map((page, index) => (
-                        <SwiperSlide key={index}>
-                            <Stack direction="row" justifyContent="center" alignItems="center" height="100%" width="100%" bgcolor="#1d2136">
-                                <TransformWrapper panning={{disabled: !isZoomed}} onZoomStop={handleZoomChange}>
-                                    <TransformComponent>
-
-                                        <img
-                                            className="fit-contain"
-                                            src={page}
-                                            alt={`page${Number(index) + 1}`}
-                                            onLoad={() => handleImageLoad(index)} // Chiamata quando l'immagine è caricata
-                                        />
-                                    </TransformComponent>
-                                </TransformWrapper>
+                        <SwiperSlide style={{overflow: 'auto'}}>
+                            <Stack direction="row" justifyContent="center" alignItems="center" height={100 + "%"} width={100 * zoom + "%"} bgcolor="#1d2136" sx={{touchAction:'pan-y', transition: 'width 0.5s ease'}}>
+                                    <img
+                                        className={"fit-contain"}
+                                        width={1}
+                                        height={1}
+                                        src={page}
+                                        alt={`page${Number(index) + 1}`}
+                                        onLoad={() => handleImageLoad(index)} // Chiamata quando l'immagine è caricata
+                                    />
                                 <Fade in={loadingImg[index]} unmountOnExit>
                                     <Stack position="absolute"
                                         height={'100%'}
@@ -165,7 +168,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                             :
                             <>
                                 <Typography color={'white'} textAlign={'center'} variant="h2" fontSize={15}>FINE CAPITOLO</Typography>
-                                <Button onClick={nextChap} variant='contained' sx={{ bgcolor: '#6024a6', color: 'white', display: 'flex', gap: '5px' }}>VAI AL SUCCESSIVO<i className="fa-solid fa-chevron-right"></i></Button>
+                                <Button disabled={isLastChap} onClick={nextChap} variant='contained' sx={{ bgcolor: '#6024a6', color: 'white', display: 'flex', gap: '5px' }}>VAI AL SUCCESSIVO<i className="fa-solid fa-chevron-right"></i></Button>
                             </>
                         }
                     </Stack>
@@ -174,13 +177,13 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
             </Swiper>
 
             {/* FOOTER */}
-            <Stack bgcolor={'#16192a'} width={'100%'} direction={'row'} justifyContent={'space-between'} alignItems={'center'} height={'78px'} px={2}>
-                <Button onClick={prevChap} sx={{ height: 1, color: 'white', display: 'flex', gap: '5px' }} ><i class="fa-solid fa-angles-left"></i>PREC</Button>
+            <Stack bgcolor={'#16192a'} width={'100%'} direction={'row'} justifyContent={'space-between'} alignItems={'center'} height={'98px'} px={2} pb={'20px'}>
+                <Button onClick={prevChap} sx={{ height: 1, color: 'white', display: 'flex', gap: '5px' }} ><i className="fa-solid fa-angles-left"></i>PREC</Button>
                 <Stack sx={{ opacity: .5 }} spacing={.2} alignItems={'center'} justifyContent={'center'} py={2}>
                     <Typography textAlign={'center'} variant="h2" color={'white'} fontSize={15}>{String(currentSlideIndex).padStart(2, '0')}/{String(pages.length).padStart(2, '0')}</Typography>
                     {loading && <Typography variant="h3" color={'white'} fontSize={10}>...caricamento pagine...</Typography>}
                 </Stack>
-                <Button disabled={isLastChap} onClick={nextChap} sx={{ height: 1, color: 'white', display: 'flex', gap: '5px' }}>SUCC<i class="fa-solid fa-angles-right"></i></Button>
+                <Button disabled={isLastChap} onClick={nextChap} sx={{ height: 1, color: 'white', display: 'flex', gap: '5px' }}>SUCC<i className="fa-solid fa-angles-right"></i></Button>
             </Stack>
         </>
     )

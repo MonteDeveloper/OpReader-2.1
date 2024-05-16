@@ -93,8 +93,8 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
     }
 
     const [zoom, setZoom] = useState(1);
-    
-    function switchZoom(){
+
+    function switchZoom() {
         setZoom(zoom == 1 ? 2.4 : 1);
     }
 
@@ -118,22 +118,27 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 onSwiper={(swiper) => console.log(swiper)}
                 onSlideChange={(swiper) => setCurrentSlideIndex(swiper.activeIndex + 1)}
                 style={{ height: 'calc(100dvh - (78px * 2 + 20px))', position: 'relative' }}
-                // allowTouchMove={zoom == 1 ? true : false}
+                touchMoveStopPropagation={zoom != 1 ? true : false}
+                allowTouchMove={zoom == 1 ? true : false}
                 allowSlideNext={zoom == 1 ? true : false}
                 allowSlidePrev={zoom == 1 ? true : false}
             >
                 {
                     pages.map((page, index) => (
-                        <SwiperSlide style={{overflow: 'auto'}}>
-                            <Stack direction="row" justifyContent="center" alignItems="center" height={100 + "%"} width={100 * zoom + "%"} bgcolor="#1d2136" sx={{transition: 'width 0.5s ease'}}>
-                                    <img
-                                        className={"fit-contain"}
-                                        width={1}
-                                        height={1}
-                                        src={page}
-                                        alt={`page${Number(index) + 1}`}
-                                        onLoad={() => handleImageLoad(index)} // Chiamata quando l'immagine è caricata
-                                    />
+                        <SwiperSlide>
+                            <Stack direction="row" justifyContent="center" alignItems="center" height={1} width={1} bgcolor="#1d2136">
+                                <Box height={1} width={1} sx={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                                    <Box height={1} width={100 * zoom + '%'} sx={{transition: 'width 0.5s ease'}}>
+                                        <img
+                                            className={"fit-contain"}
+                                            width={1}
+                                            height={1}
+                                            src={page}
+                                            alt={`page${Number(index) + 1}`}
+                                            onLoad={() => handleImageLoad(index)} // Chiamata quando l'immagine è caricata
+                                        />
+                                    </Box>
+                                </Box>
                                 <Fade in={loadingImg[index]} unmountOnExit>
                                     <Stack position="absolute"
                                         height={'100%'}

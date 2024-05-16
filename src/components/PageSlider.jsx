@@ -118,8 +118,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                 onSwiper={(swiper) => console.log(swiper)}
                 onSlideChange={(swiper) => setCurrentSlideIndex(swiper.activeIndex + 1)}
                 style={{ height: 'calc(100dvh - (78px * 2 + 20px))', position: 'relative' }}
-                touc
-                allowTouchMove={zoom == 1 ? true : false}
+                // allowTouchMove={zoom == 1 ? true : false}
                 allowSlideNext={zoom == 1 ? true : false}
                 allowSlidePrev={zoom == 1 ? true : false}
             >

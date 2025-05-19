@@ -318,7 +318,7 @@ function HomeChapters() {
             </Stack>
           </Fade>
 
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ pb: 12 }}>
             {chapterGroups.map((group, index) => {
               const isLastOdd = chapterGroups.length % 2 === 1 && index === chapterGroups.length - 1;
               return (

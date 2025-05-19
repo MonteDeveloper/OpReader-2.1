@@ -5,12 +5,15 @@ import CssBaseline from '@mui/material/CssBaseline'
 import App from './App.jsx'
 import theme from './theme'
 import './index.css'
+import { ReaderProvider } from './context/ReaderContext'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <ReaderProvider>
+        <App />
+      </ReaderProvider>
     </ThemeProvider>
   </React.StrictMode>
 )

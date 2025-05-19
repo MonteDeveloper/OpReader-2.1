@@ -463,7 +463,7 @@ function HomeChapters() {
         </Box>
       </Slide>
 
-      <Slide direction="right" in={showContent} mountOnEnter unmountOnExit>
+      <Slide direction="left" in={showContent} mountOnEnter unmountOnExit>
         <Button
           variant="contained"
           startIcon={<PlayArrowIcon />}
@@ -471,8 +471,8 @@ function HomeChapters() {
           disabled={!showContent}
           sx={{
             position: 'fixed',
-            bottom: 16,
-            left: 16,
+            bottom: { xs: 'calc(16px + 16px)', sm: 16 },
+            right: 16,
             bgcolor: 'white',
             color: '#1d2136',
             py: 2,
@@ -485,13 +485,13 @@ function HomeChapters() {
         </Button>
       </Slide>
 
-      <Slide direction="left" in={showContent} mountOnEnter unmountOnExit>
+      <Slide direction="right" in={showContent} mountOnEnter unmountOnExit>
         <SpeedDial
           ariaLabel="Menu opzioni"
           sx={{ 
             position: 'fixed', 
-            bottom: 16, 
-            right: 16,
+            bottom: { xs: 'calc(16px + 16px)', sm: 16 }, 
+            left: 16,
             pointerEvents: showContent ? 'auto' : 'none'
           }}
           icon={

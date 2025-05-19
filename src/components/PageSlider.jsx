@@ -251,8 +251,16 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
             </Box>
 
             {/* FOOTER */}
-            <Stack bgcolor={'#16192a'} width={'100%'} direction={'column'} justifyContent={'space-between'} alignItems={'center'}>
-
+            <Stack 
+                bgcolor={'#16192a'} 
+                width={'100%'} 
+                direction={'column'} 
+                justifyContent={'space-between'} 
+                alignItems={'center'}
+                sx={{
+                    pb: { xs: 'calc(16px + 16px)', sm: 2 }
+                }}
+            >
                 <Stack direction={'row'} width={'100%'} justifyContent={'space-between'} alignItems={'center'} height={'78px'} px={2}>
                     <Button onClick={prevChap} sx={{ height: 1, color: 'white', display: 'flex', gap: '5px' }} ><i className="fa-solid fa-angles-left"></i>PREC</Button>
                     <Stack sx={{ opacity: .5 }} spacing={.2} alignItems={'center'} justifyContent={'center'} py={2}>

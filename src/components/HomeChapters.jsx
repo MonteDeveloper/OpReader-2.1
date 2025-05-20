@@ -399,7 +399,7 @@ function HomeChapters() {
                     {({ index, style }) => (
                       <Fade 
                         in={isModalOpen} 
-                        timeout={index * 100 + 1000}
+                        timeout={index < 10 ? index * 100 + 1000 : 0}
                         style={{ transformOrigin: '0 0 0' }}
                       >
                         <Stack style={style}>

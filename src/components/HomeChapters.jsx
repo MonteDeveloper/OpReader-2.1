@@ -369,7 +369,11 @@ function HomeChapters() {
           borderRadius: '0px !important',
         }}
       >
-        <Fade in={isModalOpen}>
+        <Grow 
+          in={isModalOpen} 
+          timeout={300}
+          style={{ transformOrigin: 'center center' }}
+        >
           <Box
             sx={{
               bgcolor: '#1d2136',
@@ -393,24 +397,30 @@ function HomeChapters() {
                     overscanCount={10}
                   >
                     {({ index, style }) => (
-                      <Stack style={style}>
-                        <ListItemButton
-                          sx={{ display: 'flex', justifyContent: 'center' }}
-                          onClick={() => openChapter(
-                            Object.keys(selectedGroup)[index],
-                            Object.values(selectedGroup)[index]
-                          )}
-                        >
-                          <ListItemText
-                            primaryTypographyProps={{ sx: { color: 'white' } }}
-                            secondaryTypographyProps={{ sx: { color: 'white', opacity: .3 } }}
-                            sx={{ textAlign: 'center' }}
-                            primary={`CAPITOLO ${Object.keys(selectedGroup)[index]}`}
-                            secondary={`VOLUME ${Object.values(selectedGroup)[index]}`}
-                          />
-                        </ListItemButton>
-                        <Divider sx={{ backgroundColor: 'white', opacity: .1 }} />
-                      </Stack>
+                      <Fade 
+                        in={isModalOpen} 
+                        timeout={index * 100 + 1000}
+                        style={{ transformOrigin: '0 0 0' }}
+                      >
+                        <Stack style={style}>
+                          <ListItemButton
+                            sx={{ display: 'flex', justifyContent: 'center' }}
+                            onClick={() => openChapter(
+                              Object.keys(selectedGroup)[index],
+                              Object.values(selectedGroup)[index]
+                            )}
+                          >
+                            <ListItemText
+                              primaryTypographyProps={{ sx: { color: 'white' } }}
+                              secondaryTypographyProps={{ sx: { color: 'white', opacity: .3 } }}
+                              sx={{ textAlign: 'center' }}
+                              primary={`CAPITOLO ${Object.keys(selectedGroup)[index]}`}
+                              secondary={`VOLUME ${Object.values(selectedGroup)[index]}`}
+                            />
+                          </ListItemButton>
+                          <Divider sx={{ backgroundColor: 'white', opacity: .1 }} />
+                        </Stack>
+                      </Fade>
                     )}
                   </FixedSizeList>
                 </Box>
@@ -437,7 +447,7 @@ function HomeChapters() {
               </>
             )}
           </Box>
-        </Fade>
+        </Grow>
       </Modal>
 
       <Slide direction='left' in={isOpenChapter} unmountOnExit>

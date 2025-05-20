@@ -386,7 +386,7 @@ function HomeChapters() {
               <>
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
                   <FixedSizeList
-                    height={window.innerHeight - 80}
+                    height={window.innerHeight - 110}
                     width={'100%'}
                     itemSize={80}
                     itemCount={Object.keys(selectedGroup).length}
@@ -414,7 +414,7 @@ function HomeChapters() {
                     )}
                   </FixedSizeList>
                 </Box>
-                <Box sx={{ borderRadius: '0px !important', bgcolor: '#16192a', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
+                <Box sx={{ p: 2, pb: "40px", borderRadius: '0px !important', bgcolor: '#16192a', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Button
                     fullWidth
                     variant="outlined"
@@ -471,8 +471,8 @@ function HomeChapters() {
           disabled={!showContent}
           sx={{
             position: 'fixed',
-            bottom: { xs: 'calc(16px + 16px)', sm: 16 },
-            right: 16,
+            bottom: { xs: '40px', sm: 16 },
+            right: 24,
             bgcolor: 'white',
             color: '#1d2136',
             py: 2,
@@ -490,8 +490,8 @@ function HomeChapters() {
           ariaLabel="Menu opzioni"
           sx={{ 
             position: 'fixed', 
-            bottom: { xs: 'calc(16px + 16px)', sm: 16 }, 
-            left: 16,
+            bottom: { xs: '40px', sm: 16 }, 
+            left: 24,
             pointerEvents: showContent ? 'auto' : 'none'
           }}
           icon={

@@ -2,6 +2,7 @@ import { Box, Divider, Fade, Slide, Stack, Typography, Button, Modal, Grid, Grow
 import PageSlider from './PageSlider'
 import { useEffect, useState } from 'react'
 import chapterDb from '../chapterDb';
+import chapterDbENG from '../chapterDbENG';
 import { FixedSizeList } from 'react-window';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
@@ -30,6 +31,7 @@ function HomeChapters() {
   const [showContent, setShowContent] = useState(true);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showOverlayContent, setShowOverlayContent] = useState(false);
+  const [pendingUpdateOnLanguageChange, setPendingUpdateOnLanguageChange] = useState(false);
 
   const {
     currentChapter,
@@ -38,9 +40,11 @@ function HomeChapters() {
     lastReadChapter,
     isDescending,
     chunkSize,
+    language,
     updateCurrentChapter,
     updateChapterOrder,
-    updateChunkSize
+    updateChunkSize,
+    updateLanguage
   } = useReader();
 
   const [chapterGroups, setChapterGroups] = useState([]);
@@ -75,13 +79,17 @@ function HomeChapters() {
 
     // Cerca da estimatedStartVolume in su
     for (let volume = estimatedStartVolume; volume <= estimatedStartVolume + 10; volume++) {
-      const url = `https://onepiecepower.com/manga8/onepiece/volumi/volume${String(volume).padStart(3, '0')}/${String(chapterNumber).padStart(3, '0')}/01.jpg`;
+      const baseUrl = language === 'IT' 
+        ? 'https://onepiecepower.com/manga8/onepiece/volumi/volume'
+        : 'https://onepiecepower.com/manga8/onepiece/eng/volume';
+      
+      const url = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapterNumber).padStart(3, '0')}/01.jpg`;
       const exists = await checkImageExists(url);
       if (exists) {
         // aggiorna chapterData + localStorage
         const updated = { ...chapterData, [chapterNumber]: volume };
         setChapterData(updated);
-        localStorage.setItem('chapterDB', JSON.stringify(updated));
+        localStorage.setItem(language === 'IT' ? 'chapterDB' : 'chapterDBENG', JSON.stringify(updated));
         return volume;
       }
     }
@@ -106,14 +114,73 @@ function HomeChapters() {
     }, 200);
   };
 
+  const handleLanguageToggle = () => {
+    setPendingUpdateOnLanguageChange(true);
+    updateLanguage(language === 'IT' ? 'ENG' : 'IT');
+  };
+
+  // Effetto per caricare i dati quando cambia la lingua
+  useEffect(() => {
+    // Controlla se esiste un valore salvato in localStorage
+    const localStorageKey = language === 'IT' ? 'chapterDB' : 'chapterDBENG';
+    const localStorageData = localStorage.getItem(localStorageKey);
+
+    if (localStorageData) {
+      // Se esiste un valore, lo carica inizialmente nello stato
+      setChapterData(JSON.parse(localStorageData));
+    } else {
+      // Altrimenti, carica i dati dal db appropriato e li salva in localStorage
+      const dataFromDb = language === 'IT' ? chapterDb : chapterDbENG;
+      localStorage.setItem(localStorageKey, JSON.stringify(dataFromDb));
+      setChapterData(dataFromDb);
+    }
+  }, [language]);
+
+  // Effetto per verificare che i dati siano stati effettivamente caricati
+  useEffect(() => {
+    if (Object.keys(chapterData).length > 0) {
+      setIsChapterDataLoaded(true);
+    }
+  }, [chapterData]);
+
+  // Effetto per l'aggiornamento automatico all'avvio
+  useEffect(() => {
+    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange) {
+      getRemainChapters();
+    }
+  }, [isChapterDataLoaded]);
+
+  // Effetto per l'aggiornamento al cambio lingua
+  useEffect(() => {
+    if (isChapterDataLoaded && pendingUpdateOnLanguageChange) {
+      // Aspetta che chapterData sia aggiornato
+      const checkDataUpdated = () => {
+        const localStorageKey = language === 'IT' ? 'chapterDB' : 'chapterDBENG';
+        const localStorageData = localStorage.getItem(localStorageKey);
+        const currentData = JSON.parse(localStorageData);
+        
+        if (JSON.stringify(currentData) === JSON.stringify(chapterData)) {
+          getRemainChapters();
+          setPendingUpdateOnLanguageChange(false);
+        } else {
+          setTimeout(checkDataUpdated, 100);
+        }
+      };
+      
+      checkDataUpdated();
+    }
+  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, language, chapterData]);
+
   const startChapterUpdate = async () => {
     setLastFoundChapter(null);
 
+    // Usa il database corretto in base alla lingua
     let lastChapterNumber = Math.max(...Object.keys(chapterData).map(Number));
     const newChapterData = { ...chapterData };
 
     try {
-      while (true) {
+      let hasMoreChapters = true;
+      while (hasMoreChapters) {
         const nextChapterNumber = lastChapterNumber + 1;
         const nextVolumeNumber = await getVolumeOfChapterIfExists(nextChapterNumber);
         console.log(`Capitolo ${nextChapterNumber}: volume ${nextVolumeNumber}`);
@@ -123,13 +190,13 @@ function HomeChapters() {
           lastChapterNumber = nextChapterNumber;
           setLastFoundChapter(nextChapterNumber);
         } else {
-          break;
+          hasMoreChapters = false;
         }
       }
 
       if (Object.keys(newChapterData).length > Object.keys(chapterData).length) {
         setChapterData(newChapterData);
-        localStorage.setItem('chapterDB', JSON.stringify(newChapterData));
+        localStorage.setItem(language === 'IT' ? 'chapterDB' : 'chapterDBENG', JSON.stringify(newChapterData));
       }
     } catch (err) {
       console.error("Errore aggiornamento capitoli:", err);
@@ -147,29 +214,6 @@ function HomeChapters() {
       }, 100);
     }
   };
-
-  useEffect(() => {
-    // Controlla se esiste un valore salvato in localStorage
-    const localStorageData = localStorage.getItem('chapterDB');
-
-    if (localStorageData) {
-      // Se esiste un valore, lo carica inizialmente nello stato
-      setChapterData(JSON.parse(localStorageData));
-    } else {
-      // Altrimenti, carica i dati da chapterDb.js e li salva in localStorage
-      const dataFromDb = chapterDb;
-      localStorage.setItem('chapterDB', JSON.stringify(dataFromDb)); // Salva i dati in localStorage
-      setChapterData(dataFromDb); // Imposta i dati nello stato
-    }
-    setIsChapterDataLoaded(true);
-  }, []);
-
-  // Avvia automaticamente l'aggiornamento dei capitoli dopo il caricamento iniziale
-  useEffect(() => {
-    if (isChapterDataLoaded) {
-      getRemainChapters();
-    }
-  }, [isChapterDataLoaded]);
 
   // Aggiorna i gruppi quando cambia l'ordine o il chunkSize
   useEffect(() => {
@@ -233,6 +277,17 @@ function HomeChapters() {
     }
   };
 
+  const handleResumeReading = () => {
+    if (lastReadChapter) {
+      openChapter(lastReadChapter.chapter, lastReadChapter.volume, lastReadChapter.page);
+    } else {
+      // Se non c'è un capitolo salvato, apri l'ultimo disponibile
+      const lastChapter = Object.keys(chapterData).pop();
+      const lastVolume = chapterData[lastChapter];
+      openChapter(lastChapter, lastVolume);
+    }
+  };
+
   const speedDialActions = [
     {
       icon: <SortIcon sx={{
@@ -257,19 +312,25 @@ function HomeChapters() {
       }} />,
       name: 'Aggiorna capitoli',
       action: getRemainChapters
+    },
+    {
+      icon: <Box
+        component="img"
+        src={language === 'IT' ? 'https://flagcdn.com/w160/it.png' : 'https://flagcdn.com/w160/gb.png'}
+        alt={language === 'IT' ? 'Bandiera italiana' : 'Bandiera inglese'}
+        sx={{
+          width: 24,
+          height: 18,
+          objectFit: 'cover',
+          borderRadius: '2px',
+          transition: 'all 0.3s ease-in-out',
+          p: 0.1
+        }}
+      />,
+      name: `Cambia lingua (${language})`,
+      action: handleLanguageToggle
     }
   ];
-
-  const handleResumeReading = () => {
-    if (lastReadChapter) {
-      openChapter(lastReadChapter.chapter, lastReadChapter.volume, lastReadChapter.page);
-    } else {
-      // Se non c'è un capitolo salvato, apri l'ultimo disponibile
-      const lastChapter = Object.keys(chapterData).pop();
-      const lastVolume = chapterData[lastChapter];
-      openChapter(lastChapter, lastVolume);
-    }
-  };
 
   return (
     <>

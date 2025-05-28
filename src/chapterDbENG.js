@@ -1,4 +1,4 @@
-let chapterDb = {
+let chapterDbENG = {
     "1": 1,
     "2": 1,
     "3": 1,
@@ -1147,7 +1147,6 @@ let chapterDb = {
     "1146": 113,
     "1147": 113,
     "1148": 113,
-    "1149": 113
 }
 
-export default chapterDb;
+export default chapterDbENG;

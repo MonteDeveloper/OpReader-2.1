@@ -14,12 +14,14 @@ export function ReaderProvider({ children }) {
     // Stato per le preferenze di visualizzazione
     const [isDescending, setIsDescending] = useState(true);
     const [chunkSize, setChunkSize] = useState(50);
+    const [language, setLanguage] = useState('IT');
 
     // Carica i dati dal localStorage all'avvio
     useEffect(() => {
         const savedOrder = localStorage.getItem('chapterOrder');
         const savedChunkSize = localStorage.getItem('chapterChunkSize');
         const savedLastChapter = localStorage.getItem('lastReadChapter');
+        const savedLanguage = localStorage.getItem('language');
 
         if (savedOrder !== null) {
             setIsDescending(JSON.parse(savedOrder));
@@ -29,6 +31,9 @@ export function ReaderProvider({ children }) {
         }
         if (savedLastChapter !== null) {
             setLastReadChapter(JSON.parse(savedLastChapter));
+        }
+        if (savedLanguage !== null) {
+            setLanguage(savedLanguage);
         }
     }, []);
 
@@ -66,6 +71,12 @@ export function ReaderProvider({ children }) {
         localStorage.setItem('chapterChunkSize', JSON.stringify(size));
     };
 
+    // Funzione per aggiornare la lingua
+    const updateLanguage = (lang) => {
+        setLanguage(lang);
+        localStorage.setItem('language', lang);
+    };
+
     const value = {
         // Stato corrente
         currentChapter,
@@ -74,12 +85,14 @@ export function ReaderProvider({ children }) {
         lastReadChapter,
         isDescending,
         chunkSize,
+        language,
         
         // Funzioni di aggiornamento
         updateCurrentChapter,
         updateCurrentPage,
         updateChapterOrder,
         updateChunkSize,
+        updateLanguage,
     };
 
     return (

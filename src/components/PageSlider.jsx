@@ -21,7 +21,12 @@ const checkImageExists = (imageUrl) => {
 };
 
 function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastChap, initialPage = 1 }) {
-    const imageLinkTemplate = `https://onepiecepower.com/manga8/onepiece/volumi/volume${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`;
+    const { language } = useReader();
+    const baseUrl = language === 'IT' 
+        ? 'https://onepiecepower.com/manga8/onepiece/volumi/volume'
+        : 'https://onepiecepower.com/manga8/onepiece/eng/volume';
+    
+    const imageLinkTemplate = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`;
 
     const isUnmountedRef = useRef(false);
     const swiperRef = useRef(null);

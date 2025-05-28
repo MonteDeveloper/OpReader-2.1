@@ -22,10 +22,10 @@ const checkImageExists = (imageUrl) => {
 
 function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastChap, initialPage = 1 }) {
     const { language } = useReader();
-    const baseUrl = language === 'IT' 
+    const baseUrl = language === 'IT'
         ? 'https://onepiecepower.com/manga8/onepiece/volumi/volume'
         : 'https://onepiecepower.com/manga8/onepiece/eng/volume';
-    
+
     const imageLinkTemplate = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`;
 
     const isUnmountedRef = useRef(false);
@@ -148,8 +148,19 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
             <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 <Swiper
                     modules={[A11y, Zoom]}
-                    spaceBetween={30}
+                    spaceBetween={0}
+                    threshold={5}
                     slidesPerView={1}
+                    cssMode={false}
+                    grabCursor={true}
+                    touchRatio={1}
+                    touchAngle={45}
+                    resistance={true}
+                    resistanceRatio={0.85}
+                    allowSlideNext={!isZoomed}
+                    allowSlidePrev={!isZoomed}
+                    allowTouchMove={!isZoomed}
+                    touchMoveStopPropagation={false}
                     onSwiper={(swiper) => {
                         swiperRef.current = swiper;
                         if (initialPage > 1) {
@@ -157,17 +168,14 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                         }
                     }}
                     onSlideChange={handleSlideChange}
-                    style={{ height: '100%' }}
-                    allowSlideNext={!isZoomed}
-                    allowSlidePrev={!isZoomed}
-                    allowTouchMove={!isZoomed}
-                    cssMode={!isZoomed}
-                    touchRatio={1}
-                    touchAngle={45}
-                    touchMoveStopPropagation={true}
-                    resistance={false}
-                    resistanceRatio={0}
+                    style={{
+                        height: '100%',
+                        transform: 'translateZ(0)', // attiva GPU
+                        willChange: 'transform'
+                    }}
+                    speed={350}
                 >
+
                     {pages.map((page, index) => (
                         <SwiperSlide key={index}>
                             <Stack direction="row" justifyContent="center" alignItems="center" height={1} width={1} bgcolor="#1d2136">
@@ -175,6 +183,10 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                                     ref={scrollRef}
                                     height={1}
                                     width={1}
+                                    onTouchStart={(e) => isZoomed && e.stopPropagation()}
+                                    onTouchMove={(e) => isZoomed && e.stopPropagation()}
+                                    onPointerDown={(e) => isZoomed && e.stopPropagation()}
+
                                     sx={{
                                         overflowX: isZoomed ? 'auto' : 'hidden',
                                         overflowY: 'hidden',
@@ -256,11 +268,11 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
             </Box>
 
             {/* FOOTER */}
-            <Stack 
-                bgcolor={'#16192a'} 
-                width={'100%'} 
-                direction={'column'} 
-                justifyContent={'space-between'} 
+            <Stack
+                bgcolor={'#16192a'}
+                width={'100%'}
+                direction={'column'}
+                justifyContent={'space-between'}
                 alignItems={'center'}
                 sx={{
                     pb: { xs: 'calc(16px + 16px)', sm: 2 }

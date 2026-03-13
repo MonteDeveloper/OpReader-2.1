@@ -62,6 +62,7 @@ function HomeChapters() {
 
   const languageRef = useRef(language);
   const editionRef = useRef(edition);
+  const hasInitialSearchDone = useRef(false);
 
   useEffect(() => { languageRef.current = language; }, [language]);
   useEffect(() => { editionRef.current = edition; }, [edition]);
@@ -244,8 +245,9 @@ function HomeChapters() {
 
   // Effetto per l'aggiornamento automatico all'avvio
   useEffect(() => {
-    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange && !isOpenChapter) {
+    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange && !isOpenChapter && !hasInitialSearchDone.current) {
       getRemainChapters();
+      hasInitialSearchDone.current = true;
     }
   }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter, getRemainChapters]);
 
@@ -253,6 +255,7 @@ function HomeChapters() {
   useEffect(() => {
     if (isChapterDataLoaded && pendingUpdateOnLanguageChange && !isOpenChapter) {
       getRemainChapters();
+      hasInitialSearchDone.current = true;
       setPendingUpdateOnLanguageChange(false);
     }
   }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter, getRemainChapters]);

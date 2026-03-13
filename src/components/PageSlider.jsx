@@ -70,6 +70,15 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
         });
     };
 
+    const handleImageError = (index) => {
+        console.error(`Errore caricamento immagine pagina ${index + 1}`);
+        setLoadingImg(prevLoading => {
+            const newLoading = [...prevLoading];
+            newLoading[index] = false;
+            return newLoading;
+        });
+    };
+
     const handleSlideChange = (swiper) => {
         const newPage = swiper.activeIndex + 1;
         updateCurrentPage(newPage);
@@ -220,6 +229,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                                             src={page}
                                             alt={`page${Number(index) + 1}`}
                                             onLoad={() => handleImageLoad(index)}
+                                            onError={() => handleImageError(index)}
                                             draggable={false}
                                             style={{
                                                 display: 'block',

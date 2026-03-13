@@ -467,10 +467,9 @@ function HomeChapters() {
               const isLastOdd = chapterGroups.length % 2 === 1 && index === chapterGroups.length - 1;
               return (
                 <Grid item xs={isLastOdd ? 12 : 6} key={`${index}-${animationKey}`}>
-                  <Grow
+                  <Fade
                     in={showContent}
                     timeout={showContent ? index * 50 + 100 : 200}
-                    style={{ transformOrigin: '0 0 0' }}
                   >
                     <Button
                       fullWidth
@@ -494,7 +493,7 @@ function HomeChapters() {
                         {Object.keys(group)[0]} - {Object.keys(group)[Object.keys(group).length - 1]}
                       </Typography>
                     </Button>
-                  </Grow>
+                  </Fade>
                 </Grid>
               );
             })}

@@ -1,6 +1,6 @@
 import { Box, Divider, Fade, Slide, Stack, Typography, Button, Modal, Grid, Grow, SpeedDial, SpeedDialAction, Menu, MenuItem } from '@mui/material'
 import PageSlider from './PageSlider'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import chapterDb from '../chapterDb';
 import chapterDbENG from '../chapterDbENG';
 import { FixedSizeList } from 'react-window';
@@ -78,7 +78,7 @@ function HomeChapters() {
     }
 
     // Cerca da estimatedStartVolume in su
-    for (let volume = estimatedStartVolume; volume <= estimatedStartVolume + 10; volume++) {
+    for (let volume = estimatedStartVolume; volume <= estimatedStartVolume + 3; volume++) {
       const baseUrl = language === 'IT' 
         ? 'https://onepiecepower.com/manga8/onepiece/volumi/volume'
         : 'https://onepiecepower.com/manga8/onepiece/eng/volume';
@@ -99,6 +99,10 @@ function HomeChapters() {
 
   // Funzione per ottenere i nuovi capitoli
   const getRemainChapters = async () => {
+    if (isOpenChapter || isLoadingNewChapters) return; // Non aggiornare se un capitolo è aperto o già in corso
+
+    setIsLoadingNewChapters(true);
+
     // Prima nascondi il contenuto
     setShowContent(false);
 
@@ -143,16 +147,18 @@ function HomeChapters() {
     }
   }, [chapterData]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Effetto per l'aggiornamento automatico all'avvio
   useEffect(() => {
-    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange) {
+    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange && !isOpenChapter) {
       getRemainChapters();
     }
-  }, [isChapterDataLoaded]);
+  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Effetto per l'aggiornamento al cambio lingua
   useEffect(() => {
-    if (isChapterDataLoaded && pendingUpdateOnLanguageChange) {
+    if (isChapterDataLoaded && pendingUpdateOnLanguageChange && !isOpenChapter) {
       // Aspetta che chapterData sia aggiornato
       const checkDataUpdated = () => {
         const localStorageKey = language === 'IT' ? 'chapterDB' : 'chapterDBENG';
@@ -169,7 +175,7 @@ function HomeChapters() {
       
       checkDataUpdated();
     }
-  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, language, chapterData]);
+  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, language, chapterData, isOpenChapter]);
 
   const startChapterUpdate = async () => {
     setLastFoundChapter(null);
@@ -180,7 +186,12 @@ function HomeChapters() {
 
     try {
       let hasMoreChapters = true;
-      while (hasMoreChapters) {
+      let consecutiveFailures = 0;
+      let maxIterations = 50; // Limite massimo per evitare loop infiniti
+      let iterations = 0;
+
+      while (hasMoreChapters && iterations < maxIterations) {
+        iterations++;
         const nextChapterNumber = lastChapterNumber + 1;
         const nextVolumeNumber = await getVolumeOfChapterIfExists(nextChapterNumber);
         console.log(`Capitolo ${nextChapterNumber}: volume ${nextVolumeNumber}`);
@@ -189,8 +200,12 @@ function HomeChapters() {
           newChapterData[nextChapterNumber] = nextVolumeNumber;
           lastChapterNumber = nextChapterNumber;
           setLastFoundChapter(nextChapterNumber);
+          consecutiveFailures = 0;
         } else {
-          hasMoreChapters = false;
+          consecutiveFailures++;
+          if (consecutiveFailures >= 3) {
+            hasMoreChapters = false;
+          }
         }
       }
 
@@ -201,6 +216,7 @@ function HomeChapters() {
     } catch (err) {
       console.error("Errore aggiornamento capitoli:", err);
     } finally {
+      setIsLoadingNewChapters(false);
       // Nascondi prima il contenuto dell'overlay
       setShowOverlayContent(false);
       // Dopo 100ms nascondi l'overlay

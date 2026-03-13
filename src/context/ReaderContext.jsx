@@ -15,6 +15,7 @@ export function ReaderProvider({ children }) {
     const [isDescending, setIsDescending] = useState(true);
     const [chunkSize, setChunkSize] = useState(50);
     const [language, setLanguage] = useState('IT');
+    const [edition, setEdition] = useState('BW');
 
     // Carica i dati dal localStorage all'avvio
     useEffect(() => {
@@ -22,6 +23,7 @@ export function ReaderProvider({ children }) {
         const savedChunkSize = localStorage.getItem('chapterChunkSize');
         const savedLastChapter = localStorage.getItem('lastReadChapter');
         const savedLanguage = localStorage.getItem('language');
+        const savedEdition = localStorage.getItem('edition');
 
         if (savedOrder !== null) {
             setIsDescending(JSON.parse(savedOrder));
@@ -34,6 +36,9 @@ export function ReaderProvider({ children }) {
         }
         if (savedLanguage !== null) {
             setLanguage(savedLanguage);
+        }
+        if (savedEdition !== null) {
+            setEdition(savedEdition);
         }
     }, []);
 
@@ -77,6 +82,12 @@ export function ReaderProvider({ children }) {
         localStorage.setItem('language', lang);
     };
 
+    // Funzione per aggiornare l'edizione (BW / Colored)
+    const updateEdition = (newEdition) => {
+        setEdition(newEdition);
+        localStorage.setItem('edition', newEdition);
+    };
+
     const value = {
         // Stato corrente
         currentChapter,
@@ -86,6 +97,7 @@ export function ReaderProvider({ children }) {
         isDescending,
         chunkSize,
         language,
+        edition,
         
         // Funzioni di aggiornamento
         updateCurrentChapter,
@@ -93,6 +105,7 @@ export function ReaderProvider({ children }) {
         updateChapterOrder,
         updateChunkSize,
         updateLanguage,
+        updateEdition,
     };
 
     return (

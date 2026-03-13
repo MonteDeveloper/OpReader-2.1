@@ -1,8 +1,9 @@
 import { Box, Divider, Fade, Slide, Stack, Typography, Button, Modal, Grid, Grow, SpeedDial, SpeedDialAction, Menu, MenuItem } from '@mui/material'
 import PageSlider from './PageSlider'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import chapterDb from '../chapterDb';
 import chapterDbENG from '../chapterDbENG';
+import chapterDbColored from '../chapterDbColored';
 import { FixedSizeList } from 'react-window';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
@@ -15,6 +16,7 @@ import Filter5Icon from '@mui/icons-material/Filter5';
 import Filter9PlusIcon from '@mui/icons-material/Filter9Plus';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import PaletteIcon from '@mui/icons-material/Palette';
 import { useReader } from '../context/ReaderContext';
 
 function HomeChapters() {
@@ -28,6 +30,15 @@ function HomeChapters() {
   const [isLoadingNewChapters, setIsLoadingNewChapters] = useState(false);
   const [lastFoundChapter, setLastFoundChapter] = useState(null);
   const [animationKey, setAnimationKey] = useState(0);
+
+  const isOpenChapterRef = useRef(isOpenChapter);
+  const isLoadingNewChaptersRef = useRef(isLoadingNewChapters);
+  const chapterDataRef = useRef(chapterData);
+
+  useEffect(() => { isOpenChapterRef.current = isOpenChapter; }, [isOpenChapter]);
+  useEffect(() => { isLoadingNewChaptersRef.current = isLoadingNewChapters; }, [isLoadingNewChapters]);
+  useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
+
   const [showContent, setShowContent] = useState(true);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showOverlayContent, setShowOverlayContent] = useState(false);
@@ -41,11 +52,19 @@ function HomeChapters() {
     isDescending,
     chunkSize,
     language,
+    edition,
     updateCurrentChapter,
     updateChapterOrder,
     updateChunkSize,
-    updateLanguage
+    updateLanguage,
+    updateEdition
   } = useReader();
+
+  const languageRef = useRef(language);
+  const editionRef = useRef(edition);
+
+  useEffect(() => { languageRef.current = language; }, [language]);
+  useEffect(() => { editionRef.current = edition; }, [edition]);
 
   const [chapterGroups, setChapterGroups] = useState([]);
 
@@ -59,11 +78,15 @@ function HomeChapters() {
     });
   };
 
-  const getVolumeOfChapterIfExists = async (chapterNumber) => {
-    // Se già presente nel db
-    if (chapterData[chapterNumber]) return chapterData[chapterNumber];
+  const getVolumeOfChapterIfExists = useCallback(async (chapterNumber) => {
+    const currentChapterData = chapterDataRef.current;
+    const currentLanguage = languageRef.current;
+    const currentEdition = editionRef.current;
 
-    const knownChapters = Object.keys(chapterData)
+    // Se già presente nel db
+    if (currentChapterData[chapterNumber]) return currentChapterData[chapterNumber];
+
+    const knownChapters = Object.keys(currentChapterData)
       .map(Number)
       .sort((a, b) => a - b);
 
@@ -72,117 +95,44 @@ function HomeChapters() {
     for (let i = knownChapters.length - 1; i >= 0; i--) {
       const knownChap = knownChapters[i];
       if (knownChap < chapterNumber) {
-        estimatedStartVolume = chapterData[knownChap];
+        estimatedStartVolume = currentChapterData[knownChap];
         break;
       }
     }
 
     // Cerca da estimatedStartVolume in su
     for (let volume = estimatedStartVolume; volume <= estimatedStartVolume + 3; volume++) {
-      const baseUrl = language === 'IT' 
-        ? 'https://onepiecepower.com/manga8/onepiece/volumi/volume'
-        : 'https://onepiecepower.com/manga8/onepiece/eng/volume';
+      const baseUrl = currentLanguage === 'ENG'
+        ? 'https://onepiecepower.com/manga8/onepiece/eng/volume'
+        : currentEdition === 'COLORED'
+          ? 'https://onepiecepower.com/manga8/onepiece/volumiSpeciali/volumiColored/volume'
+          : 'https://onepiecepower.com/manga8/onepiece/volumi/volume';
       
       const url = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapterNumber).padStart(3, '0')}/01.jpg`;
       const exists = await checkImageExists(url);
       if (exists) {
         // aggiorna chapterData + localStorage
-        const updated = { ...chapterData, [chapterNumber]: volume };
+        const updated = { ...currentChapterData, [chapterNumber]: volume };
         setChapterData(updated);
-        localStorage.setItem(language === 'IT' ? 'chapterDB' : 'chapterDBENG', JSON.stringify(updated));
+        const localStorageKey = currentLanguage === 'ENG' ? 'chapterDBENG' : currentEdition === 'COLORED' ? 'chapterDBColored' : 'chapterDB';
+        localStorage.setItem(localStorageKey, JSON.stringify(updated));
         return volume;
       }
     }
 
     return false;
-  };
+  }, []);
 
-  // Funzione per ottenere i nuovi capitoli
-  const getRemainChapters = async () => {
-    if (isOpenChapter || isLoadingNewChapters) return; // Non aggiornare se un capitolo è aperto o già in corso
-
-    setIsLoadingNewChapters(true);
-
-    // Prima nascondi il contenuto
-    setShowContent(false);
-
-    // Dopo 200ms (durata dell'animazione Grow), mostra l'overlay
-    setTimeout(() => {
-      setShowOverlay(true);
-      // Dopo che l'overlay è visibile, mostra il suo contenuto
-      setTimeout(() => {
-        setShowOverlayContent(true);
-        // Ora inizia l'effettivo aggiornamento
-        startChapterUpdate();
-      }, 100);
-    }, 200);
-  };
-
-  const handleLanguageToggle = () => {
-    setPendingUpdateOnLanguageChange(true);
-    updateLanguage(language === 'IT' ? 'ENG' : 'IT');
-  };
-
-  // Effetto per caricare i dati quando cambia la lingua
-  useEffect(() => {
-    // Controlla se esiste un valore salvato in localStorage
-    const localStorageKey = language === 'IT' ? 'chapterDB' : 'chapterDBENG';
-    const localStorageData = localStorage.getItem(localStorageKey);
-
-    if (localStorageData) {
-      // Se esiste un valore, lo carica inizialmente nello stato
-      setChapterData(JSON.parse(localStorageData));
-    } else {
-      // Altrimenti, carica i dati dal db appropriato e li salva in localStorage
-      const dataFromDb = language === 'IT' ? chapterDb : chapterDbENG;
-      localStorage.setItem(localStorageKey, JSON.stringify(dataFromDb));
-      setChapterData(dataFromDb);
-    }
-  }, [language]);
-
-  // Effetto per verificare che i dati siano stati effettivamente caricati
-  useEffect(() => {
-    if (Object.keys(chapterData).length > 0) {
-      setIsChapterDataLoaded(true);
-    }
-  }, [chapterData]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // Effetto per l'aggiornamento automatico all'avvio
-  useEffect(() => {
-    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange && !isOpenChapter) {
-      getRemainChapters();
-    }
-  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // Effetto per l'aggiornamento al cambio lingua
-  useEffect(() => {
-    if (isChapterDataLoaded && pendingUpdateOnLanguageChange && !isOpenChapter) {
-      // Aspetta che chapterData sia aggiornato
-      const checkDataUpdated = () => {
-        const localStorageKey = language === 'IT' ? 'chapterDB' : 'chapterDBENG';
-        const localStorageData = localStorage.getItem(localStorageKey);
-        const currentData = JSON.parse(localStorageData);
-        
-        if (JSON.stringify(currentData) === JSON.stringify(chapterData)) {
-          getRemainChapters();
-          setPendingUpdateOnLanguageChange(false);
-        } else {
-          setTimeout(checkDataUpdated, 100);
-        }
-      };
-      
-      checkDataUpdated();
-    }
-  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, language, chapterData, isOpenChapter]);
-
-  const startChapterUpdate = async () => {
+  const startChapterUpdate = useCallback(async () => {
     setLastFoundChapter(null);
 
-    // Usa il database corretto in base alla lingua
-    let lastChapterNumber = Math.max(...Object.keys(chapterData).map(Number));
-    const newChapterData = { ...chapterData };
+    // Usa il database corretto in base alla lingua/edizione
+    const currentChapterData = chapterDataRef.current;
+    const currentLanguage = languageRef.current;
+    const currentEdition = editionRef.current;
+
+    let lastChapterNumber = Math.max(...Object.keys(currentChapterData).map(Number));
+    const newChapterData = { ...currentChapterData };
 
     try {
       let hasMoreChapters = true;
@@ -209,9 +159,10 @@ function HomeChapters() {
         }
       }
 
-      if (Object.keys(newChapterData).length > Object.keys(chapterData).length) {
+      if (Object.keys(newChapterData).length > Object.keys(currentChapterData).length) {
         setChapterData(newChapterData);
-        localStorage.setItem(language === 'IT' ? 'chapterDB' : 'chapterDBENG', JSON.stringify(newChapterData));
+        const localStorageKey = currentLanguage === 'ENG' ? 'chapterDBENG' : currentEdition === 'COLORED' ? 'chapterDBColored' : 'chapterDB';
+        localStorage.setItem(localStorageKey, JSON.stringify(newChapterData));
       }
     } catch (err) {
       console.error("Errore aggiornamento capitoli:", err);
@@ -229,7 +180,82 @@ function HomeChapters() {
         }, 200);
       }, 100);
     }
+  }, [getVolumeOfChapterIfExists]);
+
+  // Funzione per ottenere i nuovi capitoli
+  const getRemainChapters = useCallback(async () => {
+    if (isOpenChapterRef.current || isLoadingNewChaptersRef.current) return; // Non aggiornare se un capitolo è aperto o già in corso
+
+    setIsLoadingNewChapters(true);
+
+    // Prima nascondi il contenuto
+    setShowContent(false);
+
+    // Dopo 200ms (durata dell'animazione Grow), mostra l'overlay
+    setTimeout(() => {
+      setShowOverlay(true);
+      // Dopo che l'overlay è visibile, mostra il suo contenuto
+      setTimeout(() => {
+        setShowOverlayContent(true);
+        // Ora inizia l'effettivo aggiornamento
+        startChapterUpdate();
+      }, 100);
+    }, 200);
+  }, [startChapterUpdate]);
+
+  const handleLanguageToggle = () => {
+    setPendingUpdateOnLanguageChange(true);
+
+    // Se si passa a ENG, forziamo il ritorno alla versione BW (no colored)
+    if (language === 'IT' && edition === 'COLORED') {
+      updateEdition('BW');
+    }
+
+    updateLanguage(language === 'IT' ? 'ENG' : 'IT');
   };
+
+  // Effetto per caricare i dati quando cambia la lingua o l'edizione
+  useEffect(() => {
+    setIsChapterDataLoaded(false);
+
+    const getDbInfo = () => {
+      if (language === 'ENG') return { key: 'chapterDBENG', db: chapterDbENG };
+      if (edition === 'COLORED') return { key: 'chapterDBColored', db: chapterDbColored };
+      return { key: 'chapterDB', db: chapterDb };
+    };
+
+    const { key, db } = getDbInfo();
+    const localStorageData = localStorage.getItem(key);
+
+    if (localStorageData) {
+      setChapterData(JSON.parse(localStorageData));
+    } else {
+      localStorage.setItem(key, JSON.stringify(db));
+      setChapterData(db);
+    }
+  }, [language, edition]);
+
+  // Effetto per verificare che i dati siano stati effettivamente caricati
+  useEffect(() => {
+    if (Object.keys(chapterData).length > 0) {
+      setIsChapterDataLoaded(true);
+    }
+  }, [chapterData]);
+
+  // Effetto per l'aggiornamento automatico all'avvio
+  useEffect(() => {
+    if (isChapterDataLoaded && !pendingUpdateOnLanguageChange && !isOpenChapter) {
+      getRemainChapters();
+    }
+  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter, getRemainChapters]);
+
+  // Effetto per l'aggiornamento al cambio lingua o edizione
+  useEffect(() => {
+    if (isChapterDataLoaded && pendingUpdateOnLanguageChange && !isOpenChapter) {
+      getRemainChapters();
+      setPendingUpdateOnLanguageChange(false);
+    }
+  }, [isChapterDataLoaded, pendingUpdateOnLanguageChange, isOpenChapter, getRemainChapters]);
 
   // Aggiorna i gruppi quando cambia l'ordine o il chunkSize
   useEffect(() => {
@@ -304,6 +330,34 @@ function HomeChapters() {
     }
   };
 
+  const RainbowPaletteIcon = (props) => (
+    <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 48 48"
+    {...props}
+  >
+    <defs>
+      <linearGradient id="brightRainbow" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#FF3B30"/>   {/* rosso acceso */}
+        <stop offset="15%" stopColor="#FF9500"/>  {/* arancio acceso */}
+        <stop offset="30%" stopColor="#FFD300"/>  {/* giallo acceso */}
+        <stop offset="45%" stopColor="#32D74B"/>  {/* verde acceso */}
+        <stop offset="60%" stopColor="#0A84FF"/>  {/* blu acceso */}
+        <stop offset="75%" stopColor="#5E5CE6"/>  {/* viola acceso */}
+        <stop offset="90%" stopColor="#FF2D55"/>  {/* fucsia acceso */}
+      </linearGradient>
+    </defs>
+    <g transform="translate(0,0) scale(1)">
+      <path
+        d="M28,33c9,0,18-3,18-15C46,9,37,2,27,2h-.5C13,2,2,11.8,2,24s8,22,21.5,22C29,46,31,39,26,36,25.1,35.4,25,33,28,33ZM14,21a3,3,0,1,1,3-3A2.9,2.9,0,0,1,14,21Zm7-5a3,3,0,1,1,3-3A2.9,2.9,0,0,1,21,16Zm15-2a3,3,0,1,1-3,3A2.9,2.9,0,0,1,36,14ZM29,9a3,3,0,1,1-3,3A2.9,2.9,0,0,1,29,9Z"
+        fill="url(#brightRainbow)"
+      />
+    </g>
+  </svg>
+  );
+
   const speedDialActions = [
     {
       icon: <SortIcon sx={{
@@ -328,6 +382,16 @@ function HomeChapters() {
       }} />,
       name: 'Aggiorna capitoli',
       action: getRemainChapters
+    },
+    {
+      icon: edition === 'BW' ? <PaletteIcon /> : <RainbowPaletteIcon />, 
+      name: `Versione (${edition === 'COLORED' ? 'Colored' : 'Bianco e nero'})`,
+      action: () => {
+        if (language === 'ENG') return;
+        const newEdition = edition === 'BW' ? 'COLORED' : 'BW';
+        setPendingUpdateOnLanguageChange(true);
+        updateEdition(newEdition);
+      }
     },
     {
       icon: <Box

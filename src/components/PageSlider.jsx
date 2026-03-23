@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from 'react'
-import { A11y, Zoom } from 'swiper/modules';
+import { useCallback, useEffect, useState, useRef } from 'react'
+import { A11y } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import PropTypes from 'prop-types';
 import { useReader } from '../context/ReaderContext';
 import { Box, Button, Stack, Typography, Fade } from '@mui/material';
+import Panzoom from '@panzoom/panzoom';
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -40,7 +41,9 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
 
     const isUnmountedRef = useRef(false);
     const swiperRef = useRef(null);
-    const scrollRef = useRef(null);
+    const panzoomElementsRef = useRef(new Map());
+    const panzoomInstancesRef = useRef(new Map());
+    const zoomScaleRef = useRef(new Map());
     const { updateCurrentPage } = useReader();
 
     const [loading, setLoading] = useState(true);
@@ -48,8 +51,8 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
     const [sliderData, setSliderData] = useState(createEmptySliderData);
     const [loadingImg, setLoadingImg] = useState({});
 
-    const [zoom, setZoom] = useState(1);
-    const [isZoomed, setIsZoomed] = useState(false);
+    const [isActivePageZoomed, setIsActivePageZoomed] = useState(false);
+    const [activeSlideIndex, setActiveSlideIndex] = useState(0);
     const [splitHorizontalMode, setSplitHorizontalMode] = useState(false);
     const [currentLogicalPage, setCurrentLogicalPage] = useState(initialPage);
     const [currentSplitPart, setCurrentSplitPart] = useState(null);
@@ -59,10 +62,64 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
     const displayPages = splitHorizontalMode ? sliderData.splitPages : sliderData.normalPages;
     requestedInitialPageRef.current = initialPage;
 
-    const handleZoomToggle = () => {
-        setIsZoomed(!isZoomed);
-        setZoom(isZoomed ? 1 : 2.4);
-    };
+    const getActivePageId = useCallback(() => {
+        const swiper = swiperRef.current;
+        if (!swiper) {
+            return null;
+        }
+
+        const activePage = displayPages[swiper.activeIndex];
+        return activePage?.id ?? null;
+    }, [displayPages]);
+
+    const syncActiveZoomState = useCallback(() => {
+        const activePageId = getActivePageId();
+        if (!activePageId) {
+            setIsActivePageZoomed(false);
+            return;
+        }
+
+        const currentScale = zoomScaleRef.current.get(activePageId) ?? 1;
+        setIsActivePageZoomed(currentScale > 1.01);
+    }, [getActivePageId]);
+
+    const resetPageZoom = useCallback((pageId) => {
+        const panzoomEntry = panzoomInstancesRef.current.get(pageId);
+        if (!panzoomEntry) {
+            return;
+        }
+
+        panzoomEntry.panzoom.zoom(1, { animate: true });
+        panzoomEntry.panzoom.pan(0, 0, { animate: true });
+        zoomScaleRef.current.set(pageId, 1);
+        setIsActivePageZoomed(false);
+        syncActiveZoomState();
+    }, [syncActiveZoomState]);
+
+    const handleZoomToggle = useCallback(() => {
+        const activePageId = getActivePageId();
+        if (!activePageId) {
+            return;
+        }
+
+        const currentScale = zoomScaleRef.current.get(activePageId) ?? 1;
+
+        if (currentScale > 1.01) {
+            resetPageZoom(activePageId);
+            return;
+        }
+
+        const panzoomEntry = panzoomInstancesRef.current.get(activePageId);
+        if (!panzoomEntry) {
+            return;
+        }
+
+        // Keep it immediate so one-finger pan is available right away.
+        panzoomEntry.panzoom.zoom(2.2, { animate: false });
+        zoomScaleRef.current.set(activePageId, 2.2);
+        setIsActivePageZoomed(true);
+        syncActiveZoomState();
+    }, [getActivePageId, resetPageZoom, syncActiveZoomState]);
 
     const handleSplitHorizontalToggle = () => {
         const swiper = swiperRef.current;
@@ -77,21 +134,6 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
 
         setSplitHorizontalMode((prev) => !prev);
     };
-
-    useEffect(() => {
-        if (isZoomed && scrollRef.current) {
-            setTimeout(() => {
-                requestAnimationFrame(() => {
-                    const scrollEl = scrollRef.current;
-                    if (scrollEl) {
-                        scrollEl.scrollLeft = scrollEl.scrollWidth - scrollEl.clientWidth;
-                    }
-                });
-            }, 100); // puoi aumentare tipo a 50ms se ancora troppo presto
-        }
-    }, [isZoomed]);
-
-
 
     const handleImageLoad = (pageId) => {
         setLoadingImg(prevLoading => {
@@ -113,6 +155,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
     };
 
     const handleSlideChange = (swiper) => {
+        setActiveSlideIndex(swiper.activeIndex);
         const activeModeMap = splitHorizontalMode ? sliderData.splitSlideToLogical : sliderData.normalSlideToLogical;
         const logicalIndex = activeModeMap[swiper.activeIndex];
 
@@ -130,6 +173,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
         setCurrentLogicalPage(newLogicalPage);
         setCurrentSplitPart(splitPart);
         updateCurrentPage(newLogicalPage);
+        syncActiveZoomState();
     };
 
     const getImageSize = (imageUrl) => {
@@ -299,6 +343,108 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
     }, [splitHorizontalMode, sliderData]);
 
     useEffect(() => {
+        syncActiveZoomState();
+    }, [displayPages, syncActiveZoomState]);
+
+    useEffect(() => {
+        const availablePageIds = new Set(displayPages.map((page) => page.id));
+
+        Array.from(panzoomInstancesRef.current.keys()).forEach((pageId) => {
+            if (availablePageIds.has(pageId)) {
+                return;
+            }
+
+            const instance = panzoomInstancesRef.current.get(pageId);
+            if (instance) {
+                instance.destroy();
+            }
+            panzoomInstancesRef.current.delete(pageId);
+            panzoomElementsRef.current.delete(pageId);
+            zoomScaleRef.current.delete(pageId);
+        });
+    }, [displayPages]);
+
+    useEffect(() => {
+        const panzoomInstances = panzoomInstancesRef.current;
+        const panzoomElements = panzoomElementsRef.current;
+        const zoomScales = zoomScaleRef.current;
+
+        return () => {
+            panzoomInstances.forEach((instance) => instance.destroy());
+            panzoomInstances.clear();
+            panzoomElements.clear();
+            zoomScales.clear();
+        };
+    }, []);
+
+    const bindPanzoom = useCallback((pageId, element) => {
+        if (!element || panzoomInstancesRef.current.has(pageId)) {
+            return;
+        }
+
+        const panzoom = Panzoom(element, {
+            minScale: 1,
+            maxScale: 4,
+            startScale: zoomScaleRef.current.get(pageId) ?? 1,
+            // Disable containment clamp to allow free pan while zoomed.
+            contain: false,
+            canvas: true,
+            animate: true,
+            panOnlyWhenZoomed: true,
+            pinchAndPan: true,
+            handleStartEvent: (event) => {
+                const scale = panzoom.getScale();
+                const touchCount = event?.touches?.length ?? 0;
+                const isPointerPinch = event?.pointerType === 'touch' && event?.isPrimary === false;
+                const isPinchGesture = touchCount >= 2 || isPointerPinch;
+                const shouldCaptureGesture = isPinchGesture || scale > 1.01;
+
+                if (!shouldCaptureGesture) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+
+        const handlePanzoomChange = (event) => {
+            const scale = event?.detail?.scale ?? 1;
+            zoomScaleRef.current.set(pageId, scale);
+            if (getActivePageId() === pageId) {
+                setIsActivePageZoomed(scale > 1.01);
+            }
+        };
+
+        element.addEventListener('panzoomchange', handlePanzoomChange);
+
+        panzoomInstancesRef.current.set(pageId, {
+            panzoom,
+            destroy: () => {
+                element.removeEventListener('panzoomchange', handlePanzoomChange);
+                panzoom.destroy();
+            }
+        });
+
+        zoomScaleRef.current.set(pageId, zoomScaleRef.current.get(pageId) ?? 1);
+    }, [getActivePageId]);
+
+    const setPanzoomElementRef = useCallback((pageId, element) => {
+        if (!element) {
+            panzoomElementsRef.current.delete(pageId);
+            const instance = panzoomInstancesRef.current.get(pageId);
+            if (instance) {
+                instance.destroy();
+                panzoomInstancesRef.current.delete(pageId);
+            }
+            return;
+        }
+
+        panzoomElementsRef.current.set(pageId, element);
+        bindPanzoom(pageId, element);
+    }, [bindPanzoom]);
+
+    useEffect(() => {
         setLoadingImg((prev) => {
             const next = {};
 
@@ -358,22 +504,26 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
             {/* CONTENT */}
             <Box sx={{ flex: 1, overflow: 'hidden' }}>
                 <Swiper
-                    modules={[A11y, Zoom]}
+                    modules={[A11y]}
                     spaceBetween={0}
                     threshold={5}
                     slidesPerView={1}
                     cssMode={false}
                     grabCursor={true}
+                    noSwiping
                     touchRatio={1}
                     touchAngle={45}
                     resistance={true}
                     resistanceRatio={0.85}
-                    allowSlideNext={!isZoomed}
-                    allowSlidePrev={!isZoomed}
-                    allowTouchMove={!isZoomed}
+                    allowSlideNext={!isActivePageZoomed}
+                    allowSlidePrev={!isActivePageZoomed}
+                    allowTouchMove={!isActivePageZoomed}
                     touchMoveStopPropagation={false}
+                    touchStartPreventDefault={false}
+                    touchStartForcePreventDefault={false}
                     onSwiper={(swiper) => {
                         swiperRef.current = swiper;
+                        setActiveSlideIndex(swiper.activeIndex);
                     }}
                     onSlideChange={handleSlideChange}
                     style={{
@@ -388,35 +538,34 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                         <SwiperSlide key={page.id}>
                             <Stack direction="row" justifyContent="center" alignItems="center" height={1} width={1} bgcolor="#1d2136">
                                 <Box
-                                    ref={scrollRef}
+                                    className={
+                                        isActivePageZoomed && activeSlideIndex === index
+                                            ? 'swiper-no-swiping'
+                                            : undefined
+                                    }
                                     height={1}
                                     width={1}
-                                    onTouchStart={(e) => isZoomed && e.stopPropagation()}
-                                    onTouchMove={(e) => isZoomed && e.stopPropagation()}
-                                    onPointerDown={(e) => isZoomed && e.stopPropagation()}
 
                                     sx={{
-                                        overflowX: isZoomed ? 'auto' : 'hidden',
-                                        overflowY: 'hidden',
-                                        WebkitOverflowScrolling: 'touch',
-                                        touchAction: 'pan-x',
+                                        overflow: 'hidden',
+                                        touchAction: 'none',
                                         overscrollBehavior: 'none',
-                                        whiteSpace: 'nowrap',
                                         display: 'flex',
-                                        scrollBehavior: 'smooth',
-                                        msOverflowStyle: 'none',
-                                        scrollbarWidth: 'none',
-                                        '&::-webkit-scrollbar': {
-                                            display: 'none'
-                                        }
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
                                     }}
                                 >
                                     <Box
+                                        ref={(element) => setPanzoomElementRef(page.id, element)}
                                         height={1}
-                                        width={`${100 * zoom}%`}
+                                        width={1}
                                         sx={{
-                                            transition: 'width 0.3s ease',
-                                            flexShrink: 0
+                                            willChange: 'transform',
+                                            transformOrigin: 'center center',
+                                            touchAction: 'none',
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
                                         }}
                                     >
                                         {page.splitSide ? (
@@ -454,7 +603,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                                                             height: '100%',
                                                             transform: page.splitSide === 'right' ? 'translateX(-50%)' : 'translateX(0)',
                                                             userSelect: 'none',
-                                                            pointerEvents: 'none',
+                                                            pointerEvents: 'auto',
                                                             WebkitUserDrag: 'none'
                                                         }}
                                                     />
@@ -473,7 +622,7 @@ function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastC
                                                 style={{
                                                     display: 'block',
                                                     userSelect: 'none',
-                                                    pointerEvents: 'none',
+                                                    pointerEvents: 'auto',
                                                     WebkitUserDrag: 'none'
                                                 }}
                                             />

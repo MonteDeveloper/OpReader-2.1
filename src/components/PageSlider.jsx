@@ -31,13 +31,19 @@ const checkImageExists = (imageUrl) => {
 
 function PageSlider({ volume, chapter, closeChapter, nextChap, prevChap, isLastChap, initialPage = 1 }) {
     const { language, edition } = useReader();
-    const baseUrl = language === 'ENG'
-        ? 'https://onepiecepower.com/manga8/onepiece/eng/volume'
-        : edition === 'COLORED'
-          ? 'https://onepiecepower.com/manga8/onepiece/volumiSpeciali/volumiColored/volume'
-          : 'https://onepiecepower.com/manga8/onepiece/volumi/volume';
+    let imageLinkTemplate;
 
-    const imageLinkTemplate = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`;
+    if (language === 'ENG') {
+      const baseUrl = 'https://onepiecepower.com/manga8/onepiece/eng/volume';
+    
+      imageLinkTemplate = `${baseUrl}${String(volume).padStart(3, '0')}/capitolo${String(chapter).padStart(4, '0')}/`;
+    } else {
+      const baseUrl = edition === 'COLORED'
+        ? 'https://onepiecepower.com/manga8/onepiece/volumiSpeciali/volumiColored/volume'
+        : 'https://onepiecepower.com/manga8/onepiece/volumi/volume';
+    
+      imageLinkTemplate = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapter).padStart(3, '0')}/`;
+    }
 
     const isUnmountedRef = useRef(false);
     const swiperRef = useRef(null);

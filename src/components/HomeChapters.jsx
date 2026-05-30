@@ -103,13 +103,20 @@ function HomeChapters() {
 
     // Cerca da estimatedStartVolume in su
     for (let volume = estimatedStartVolume; volume <= estimatedStartVolume + 3; volume++) {
-      const baseUrl = currentLanguage === 'ENG'
-        ? 'https://onepiecepower.com/manga8/onepiece/eng/volume'
-        : currentEdition === 'COLORED'
+      let url;
+
+      if (currentLanguage === 'ENG') {
+        const baseUrl = 'https://onepiecepower.com/manga8/onepiece/eng/volume';
+        
+        url = `${baseUrl}${String(volume).padStart(3, '0')}/capitolo${String(chapterNumber).padStart(4, '0')}/01.jpg`;
+      } else {
+        const baseUrl = currentEdition === 'COLORED'
           ? 'https://onepiecepower.com/manga8/onepiece/volumiSpeciali/volumiColored/volume'
           : 'https://onepiecepower.com/manga8/onepiece/volumi/volume';
       
-      const url = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapterNumber).padStart(3, '0')}/01.jpg`;
+        url = `${baseUrl}${String(volume).padStart(3, '0')}/${String(chapterNumber).padStart(3, '0')}/01.jpg`;
+      }
+      
       const exists = await checkImageExists(url);
       if (exists) {
         // aggiorna chapterData + localStorage
